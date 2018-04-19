@@ -1,0 +1,23 @@
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+        public: false
+        bind:
+            $enumTypes: '%doctrine.dbal.connection_factory.types%'
+            
+     KRG\DoctrineExtensionBundle\:
+         resource: '../../../'
+         exclude: '../../../{DBAL,Resources,Tests}'
+         public: true
+
+     KRG\DoctrineExtensionBundle\Form\Type:
+         resource: '../../../Form/Type'
+         tags: ['form.type']
+
+     KRG\DoctrineExtensionBundle\Form\Extension:
+         resource: '../../../Form/Extension'
+         tags: ['form.type_extension']
+
+     KRG\DoctrineExtensionBundle\Request\ParamConverter\DoctrineParamConverter:
+         tags: [{ name: request.param_converter, converter: doctrine.orm }]

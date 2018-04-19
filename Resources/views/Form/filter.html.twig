@@ -1,0 +1,16 @@
+{% block filter_widget %}
+    {{ form_widget(form) }}
+    <script type="text/javascript">
+        (function () {
+            var form = document.forms.{{ form.vars.name }};
+            var reset = form.querySelector('button[type="reset"]');
+            var selects = form.querySelectorAll('select');
+            reset.addEventListener('click', function(event) {
+                Array.prototype.forEach.call(selects, function(select){
+                    select.selectedIndex = 0;
+                });
+                form.submit();
+            });
+        })();
+    </script>
+{% endblock %}

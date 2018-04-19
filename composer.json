@@ -1,0 +1,24 @@
+{
+  "name"       : "kangourouge/doctrine-extension-bundle",
+  "description": "Kangourouge Doctrine Extension Bundle",
+  "type"       : "symfony-bundle",
+  "license"    : "MIT",
+  "authors"    : [
+    {
+      "name" : "Chafiq El Mechrafi",
+      "email": "chafiq.elmechrafi@gmail.com"
+    }
+  ],
+  "require"    : {
+    "php"             : "^7.0",
+    "doctrine/dbal"   : "^5.6",
+    "doctrine/orm"    : "^5.6",
+    "doctrine/common" : "~2.4"
+  },
+  "autoload"   : {
+    "psr-0": {
+      "KRG\\DoctrineExtensionBundle": ""
+    }
+  },
+  "target-dir" : "KRG/DoctrineExtensionBundle"
+}

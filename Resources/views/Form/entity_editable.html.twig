@@ -1,0 +1,63 @@
+{% block entity_editable_widget %}
+    <div id="{{ form.vars.id }}">
+        <div>
+            {% if not required %}
+                {{ form_row(form.__action.placeholder, {attr: form.vars.attr|merge({'data-target':form.vars.id ~ '_placeholder' })}) }}
+                <div id="{{ form.vars.id }}_placeholder">
+                </div>
+            {% endif %}
+
+            {% if form.children._select is defined and radio_actions.select is defined %}
+                {{ form_row(form.__action[radio_actions.select], {attr: form._select.vars.attr|merge({'data-target':form._select.vars.id ~ '_content'})}) }}
+                <div id="{{ form._select.vars.id }}_content">
+                    {{ form_row(form._select) }}
+                </div>
+            {% endif %}
+
+            {% if form.children._edit is defined and radio_actions.edit is defined %}
+                {{ form_row(form.__action[radio_actions.edit], {attr: form._edit.vars.attr|merge({'data-target':form._edit.vars.id ~ '_content'})}) }}
+                <div id="{{ form._edit.vars.id }}_content">
+                    {{ form_row(form._edit) }}
+                </div>
+            {% endif %}
+
+            {% if form.children._create is defined and radio_actions.create is defined %}
+                {{ form_row(form.__action[radio_actions.create], {attr: form._create.vars.attr|merge({'data-target':form._create.vars.id ~ '_content'})}) }}
+                <div id="{{ form._create.vars.id }}_content">
+                    {{ form_row(form._create) }}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        (function(){
+            var radios = document.querySelectorAll('#{{ form.vars.id }} input[type="radio"][name="{{ form.__action.vars.full_name }}"]');
+            Array.prototype.forEach.call(radios, function (radio) {
+                radio.addEventListener('change', onChange);
+            });
+            function onChange(event){
+                Array.prototype.forEach.call(radios, function (radio) {
+                    var toggle = !radio.checked;
+                    var target = document.getElementById(radio.dataset.target);
+                    target.hidden = toggle;
+
+                    if (toggle) {
+                        target.classList.add('hidden');
+                    } else {
+                        target.classList.remove('hidden');
+                    }
+
+                    var prefix = !toggle ? '__' : '';
+                    var requiredElements = target.querySelectorAll('[' + prefix + 'required="required"]');
+                    Array.prototype.forEach.call(requiredElements, function (element) {
+                        element.removeAttribute(prefix + 'required');
+                        element.setAttribute( (toggle ? '__' : '') + 'required', 'required');
+                    });
+                });
+            }
+            onChange(null);
+        })();
+    </script>
+
+{% endblock %}
