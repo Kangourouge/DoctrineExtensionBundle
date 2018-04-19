@@ -5,19 +5,15 @@ services:
         public: false
         bind:
             $enumTypes: '%doctrine.dbal.connection_factory.types%'
-            
-     KRG\DoctrineExtensionBundle\:
-         resource: '../../../'
-         exclude: '../../../{DBAL,Resources,Tests}'
-         public: true
 
-     KRG\DoctrineExtensionBundle\Form\Type:
-         resource: '../../../Form/Type'
-         tags: ['form.type']
+    KRG\DoctrineExtensionBundle\Form\Type\:
+        resource: '../../Form/Type'
+        tags: ['form.type']
+        public: true
 
-     KRG\DoctrineExtensionBundle\Form\Extension:
-         resource: '../../../Form/Extension'
-         tags: ['form.type_extension']
+    KRG\DoctrineExtensionBundle\Form\Extension\ChoiceTypeExtension:
+        tags: [{name: form.type_extension, extended_type: Symfony\Component\Form\Extension\Core\Type\ChoiceType}]
+        public: true
 
-     KRG\DoctrineExtensionBundle\Request\ParamConverter\DoctrineParamConverter:
-         tags: [{ name: request.param_converter, converter: doctrine.orm }]
+    KRG\DoctrineExtensionBundle\Request\ParamConverter\DoctrineParamConverter:
+        tags: [{ name: request.param_converter, converter: krg.doctrine.param_converter }]

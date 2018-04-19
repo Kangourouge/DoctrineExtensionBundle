@@ -2,11 +2,11 @@
 
 namespace KRG\DoctrineExtensionBundle\Request\ParamConverter;
 
-use Sensio\Bundle\FrameworkExtraBundle\Request\ParamConverter\DoctrineParamConverter as BaseDoctrineParamConverter;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
+use Sensio\Bundle\FrameworkExtraBundle\Request\ParamConverter\ParamConverterInterface;
 use Symfony\Component\HttpFoundation\Request;
 
-class DoctrineParamConverter extends BaseDoctrineParamConverter
+class DoctrineParamConverter extends \Sensio\Bundle\FrameworkExtraBundle\Request\ParamConverter\DoctrineParamConverter
 {
     public function apply(Request $request, ParamConverter $configuration)
     {
