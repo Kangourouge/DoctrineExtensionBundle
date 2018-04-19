@@ -1,0 +1,2 @@
+# DoctrineExtensionBundle
+Deal with interfaces
