@@ -10,6 +10,7 @@ use Gedmo\Mapping\Annotation as Gedmo;
 trait SortableEntity
 {
     /**
+     * @Gedmo\SortablePosition()
      * @ORM\Column(type="integer")
      */
     protected $position;
