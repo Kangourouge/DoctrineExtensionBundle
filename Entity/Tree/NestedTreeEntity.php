@@ -2,9 +2,9 @@
 
 namespace KRG\DoctrineExtensionBundle\Entity\Tree;
 
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Doctrine\Common\Collections\Collection;
+use Doctrine\Common\Collections\ArrayCollection;
 use Gedmo\Mapping\Annotation as Gedmo;
 
 trait NestedTreeEntity
@@ -35,9 +35,8 @@ trait NestedTreeEntity
     protected $root;
 
     /**
-     * Set lft
-     *
-     * @param integer $lft
+     * @param $lft integer
+     * @return $this
      */
     public function setLft($lft)
     {
@@ -47,7 +46,7 @@ trait NestedTreeEntity
     }
 
     /**
-     * Get lft
+     * @return integer
      */
     public function getLft()
     {
@@ -55,9 +54,8 @@ trait NestedTreeEntity
     }
 
     /**
-     * Set lvl
-     *
-     * @param integer $lvl
+     * @param $lvl integer
+     * @return $this
      */
     public function setLvl($lvl)
     {
@@ -67,7 +65,7 @@ trait NestedTreeEntity
     }
 
     /**
-     * Get lvl
+     * @return integer
      */
     public function getLvl()
     {
@@ -75,9 +73,8 @@ trait NestedTreeEntity
     }
 
     /**
-     * Set rgt
-     *
-     * @param integer $rgt
+     * @param $rgt
+     * @return $this
      */
     public function setRgt($rgt)
     {
@@ -87,7 +84,7 @@ trait NestedTreeEntity
     }
 
     /**
-     * Get rgt
+     * @return integer
      */
     public function getRgt()
     {
@@ -95,7 +92,8 @@ trait NestedTreeEntity
     }
 
     /**
-     * Set root
+     * @param null $root
+     * @return $this
      */
     public function setRoot($root = null)
     {
@@ -105,7 +103,7 @@ trait NestedTreeEntity
     }
 
     /**
-     * Get root
+     * @return int
      */
     public function getRoot()
     {
@@ -113,7 +111,7 @@ trait NestedTreeEntity
     }
 
     /**
-     * Is root
+     * @return bool
      */
     public function isRoot()
     {
@@ -121,7 +119,8 @@ trait NestedTreeEntity
     }
 
     /**
-     * Set parent
+     * @param NestedTreeInterface|null $parent
+     * @return $this
      */
     public function setParent(NestedTreeInterface $parent = null)
     {
@@ -131,7 +130,7 @@ trait NestedTreeEntity
     }
 
     /**
-     * Get parent
+     * @return NestedTreeInterface
      */
     public function getParent()
     {
@@ -139,7 +138,8 @@ trait NestedTreeEntity
     }
 
     /**
-     * Add children
+     * @param NestedTreeInterface $child
+     * @return $this
      */
     public function addChild(NestedTreeInterface $child)
     {
@@ -153,6 +153,8 @@ trait NestedTreeEntity
 
     /**
      * Remove children, annihilate the branch!
+     *
+     * @param NestedTreeInterface $child
      */
     public function removeChild(NestedTreeInterface $child)
     {
@@ -163,7 +165,7 @@ trait NestedTreeEntity
     }
 
     /**
-     * Get children
+     * @return ArrayCollection
      */
     public function getChildren()
     {
@@ -172,7 +174,6 @@ trait NestedTreeEntity
 
     /**
      * @param ArrayCollection $children
-     *
      * @return $this
      */
     public function setChildren(ArrayCollection $children)
@@ -192,7 +193,6 @@ trait NestedTreeEntity
 
     /**
      * @param NestedTreeInterface $entity
-     *
      * @return bool
      */
     public function isParentOf(NestedTreeInterface $entity)
@@ -202,7 +202,6 @@ trait NestedTreeEntity
 
     /**
      * @param Collection $entities
-     *
      * @return bool
      */
     public function isChildOf(Collection $entities)
@@ -214,5 +213,16 @@ trait NestedTreeEntity
         }
 
         return false;
+    }
+
+    /**
+     * @param null $entity
+     * @return NestedTreeEntity|null
+     */
+    public function getRootParent($entity = null)
+    {
+        $entity = $entity === null ? $this : $entity;
+
+        return $entity->getParent() ? $this->getRootParent($entity->getParent()) : $entity;
     }
 }
