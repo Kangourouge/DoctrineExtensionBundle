@@ -225,4 +225,20 @@ trait NestedTreeEntity
 
         return $entity->getParent() ? $this->getRootParent($entity->getParent()) : $entity;
     }
+
+    /**
+     * @param null  $entity
+     * @param array $hierarchy
+     * @return array
+     */
+    public function getHierarchy($entity = null, array $hierarchy = [])
+    {
+        if ($entity) {
+            array_unshift($hierarchy, $entity);
+        }
+
+        $entity = $entity === null ? $this : $entity;
+
+        return $entity->getParent() ? $this->getHierarchy($entity->getParent(), $hierarchy) : $hierarchy;
+    }
 }
