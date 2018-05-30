@@ -3,6 +3,7 @@ easy_admin:
         menu:
             -
                 label: 'System'
+                group: 'System'
                 roles: ['ROLE_SUPER_ADMIN']
                 children:
                     - { label: 'Dump Database', route: 'krg_orm_admin_download', icon: 'database' }
