@@ -6,4 +6,4 @@ easy_admin:
                 group: 'System'
                 roles: ['ROLE_SUPER_ADMIN']
                 children:
-                    - { label: 'Dump Database', route: 'krg_orm_admin_download', icon: 'database' }
+                    - { label: 'Dump database', route: 'krg_orm_admin_download', icon: 'database' }
