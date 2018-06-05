@@ -2,7 +2,7 @@ easy_admin:
     design:
         menu:
             -
-                label: 'System'
+                label: 'menu.system'
                 group: 'System'
                 priority: 0
                 roles: ['ROLE_SUPER_ADMIN']
