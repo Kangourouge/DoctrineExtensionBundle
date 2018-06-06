@@ -12,8 +12,15 @@ services:
         public: true
 
     KRG\DoctrineExtensionBundle\Form\Extension\ChoiceTypeExtension:
-        tags: [{name: form.type_extension, extended_type: Symfony\Component\Form\Extension\Core\Type\ChoiceType}]
         public: true
+        tags:
+            - { name: form.type_extension, extended_type: Symfony\Component\Form\Extension\Core\Type\ChoiceType }
+
+    KRG\DoctrineExtensionBundle\Form\Extension\EasyAdminEntityTypeExtension:
+        public: true
+        tags:
+            - { name: form.type_extension, extended_type: Symfony\Bridge\Doctrine\Form\Type\EntityType }
 
     KRG\DoctrineExtensionBundle\Request\ParamConverter\DoctrineParamConverter:
-        tags: [{ name: request.param_converter, converter: krg.doctrine.param_converter }]
+        tags:
+            - { name: request.param_converter, converter: krg.doctrine.param_converter }
