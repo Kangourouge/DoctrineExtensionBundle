@@ -1,62 +1,70 @@
 {% block phone_number_widget %}
     <div class="phone-number">
-        {{ block('form_widget') }}
+        {{ form_widget(form.intlTel,{'attr': {'style': 'padding-left: 52px;'}}) }}
+        {{ form_widget(form.phoneNumber) }}
     </div>
 
+    <link href="{{ asset('bundles/krgdoctrineextension/plugin/intl-tel-input/css/intlTelInput.min.css') }}" rel="stylesheet">
+    <style type="text/css">
+        .iti-flag {background-image: url("{{ asset('bundles/krgdoctrineextension/plugin/intl-tel-input/img/flags.png') }}");}
+    </style>
     <script type="text/javascript">
-
-        $(document).ready(function() {
+        document.addEventListener('DOMContentLoaded', function(event) {
             var phoneNumber = document.getElementById('{{ form.phoneNumber.vars.id }}');
-
-            var intlTelInput = document.getElementById('{{ form.intlTel.vars.id }}');
-            var $intlTelInput = $(intlTelInput);
-
+            var input = $('#{{ form.intlTel.vars.id }}');
             var onKeyUpTimer = null;
 
             function onKeyUp() {
                 phoneNumber.value = '';
-                if ($intlTelInput.intlTelInput('isValidNumber')) {
-                    phoneNumber.value = $intlTelInput.intlTelInput("getNumber", intlTelInputUtils.numberFormat.E164);
+                if (input.intlTelInput('isValidNumber')) {
+                    phoneNumber.value = input.intlTelInput('getNumber', intlTelInputUtils.numberFormat.E164);
                 }
             }
 
-            $intlTelInput.intlTelInput({
-//                    preferredCountries: JSON.parse(element.dataset.countries),
-                    autoPlaceholder: true,
-                    initialCountry: 'FR',
-                    geoIpLookup: function(callback) {
-                        if (typeof(window._countryCode) === 'string') {
-                            callback(window._countryCode);
-                            return;
-                        }
-                        $.get("http://ipinfo.io", function() {}, "jsonp").always(function(resp) {
-                            var countryCode = (resp && resp.country) ? resp.country : "";
-                            window._countryCode = countryCode;
-                            callback(countryCode);
-                        });
+            input.intlTelInput({
+                {% autoescape false %}
+                    {% for key, val in plugin_options %}
+                        {{ key ~ ':' ~ val ~ ',' }}
+                    {% endfor %}
+                {% endautoescape %}
+                autoPlaceholder: true,
+                initialCountry: '{{ app.request.locale|upper }}',
+                geoIpLookup: function (callback) {
+                    if (typeof(window._countryCode) === 'string') {
+                        callback(window._countryCode);
+                        return;
                     }
-                });
-            $intlTelInput
-                .on('keyup', function(event){
+                    $.get('http://ipinfo.io', function () {
+                    }, 'jsonp').always(function (resp) {
+                        var countryCode = (resp && resp.country) ? resp.country : '';
+
+                        window._countryCode = countryCode;
+                        callback(countryCode);
+                    });
+                }
+            });
+
+            input
+                .on('keyup', function (event) {
                     clearTimeout(onKeyUpTimer);
                     onKeyUpTimer = setTimeout(onKeyUp, 600);
                 })
-                .on('blur', function(event){
+                .on('blur', function (event) {
                     var number = '';
-                    if ($intlTelInput.intlTelInput('isValidNumber')) {
-                        number = $intlTelInput.intlTelInput("getNumber", intlTelInputUtils.numberFormat.NATIONAL);
-                    }
-                    $intlTelInput.intlTelInput("setNumber", number);
-                })
-                .on('focus', function(event){
-                    var number = '';
-                    if ($intlTelInput.intlTelInput('isValidNumber')) {
-                        number = $intlTelInput.intlTelInput("getNumber", intlTelInputUtils.numberFormat.NATIONAL);
-                    }
-                    $intlTelInput.val(number.replace(/[^0-9]/g, ''));
-                });
 
+                    if (input.intlTelInput('isValidNumber')) {
+                        number = input.intlTelInput('getNumber', intlTelInputUtils.numberFormat.NATIONAL);
+                    }
+                    input.intlTelInput('setNumber', number);
+                })
+                .on('focus', function (event) {
+                    var number = '';
+
+                    if (input.intlTelInput('isValidNumber')) {
+                        number = input.intlTelInput('getNumber', intlTelInputUtils.numberFormat.NATIONAL);
+                    }
+                    input.val(number.replace(/[^0-9]/g, ''));
+                });
         });
     </script>
-
-{% endblock phone_number_widget %}
+{% endblock %}

@@ -5,6 +5,7 @@ services:
         public: false
         bind:
             $enumTypes: '%doctrine.dbal.connection_factory.types%'
+            $locale: '%locale%'
 
     KRG\DoctrineExtensionBundle\Form\Type\:
         resource: '../../Form/Type'
