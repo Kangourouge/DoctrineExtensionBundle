@@ -23,5 +23,6 @@ services:
             - { name: form.type_extension, extended_type: Symfony\Bridge\Doctrine\Form\Type\EntityType }
 
     KRG\DoctrineExtensionBundle\Request\ParamConverter\DoctrineParamConverter:
-        tags:
-            - { name: request.param_converter, converter: krg.doctrine.param_converter }
+        decorates: sensio_framework_extra.converter.doctrine.orm
+        arguments:
+            $doctrineParamConverter: '@KRG\DoctrineExtensionBundle\Request\ParamConverter\DoctrineParamConverter.inner'

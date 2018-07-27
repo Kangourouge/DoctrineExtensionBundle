@@ -2,24 +2,38 @@
 
 namespace KRG\DoctrineExtensionBundle\Request\ParamConverter;
 
+use Doctrine\ORM\EntityManagerInterface;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
 use Sensio\Bundle\FrameworkExtraBundle\Request\ParamConverter\ParamConverterInterface;
 use Symfony\Component\HttpFoundation\Request;
 
-class DoctrineParamConverter extends \Sensio\Bundle\FrameworkExtraBundle\Request\ParamConverter\DoctrineParamConverter
+class DoctrineParamConverter implements ParamConverterInterface
 {
+    /** @var ParamConverterInterface */
+    protected $doctrineParamConverter;
+
+    /** @var EntityManagerInterface */
+    protected $entityManager;
+
+    public function __construct(ParamConverterInterface $doctrineParamConverter, EntityManagerInterface $entityManager)
+    {
+        $this->doctrineParamConverter = $doctrineParamConverter;
+        $this->entityManager = $entityManager;
+    }
+
     public function apply(Request $request, ParamConverter $configuration)
     {
         if ($this->isInterface($configuration->getClass())) {
-            $class = $this->registry->getManager()->getClassMetadata($configuration->getClass())->getName();
+            $class = $this->entityManager->getClassMetadata($configuration->getClass())->getName();
             $configuration->setClass($class);
         }
-        return parent::apply($request, $configuration);
+
+        return $this->doctrineParamConverter->apply($request, $configuration);
     }
 
     public function supports(ParamConverter $configuration)
     {
-        return parent::supports($configuration) || $this->isInterface($configuration->getClass());
+        return $this->doctrineParamConverter->supports($configuration) || $this->isInterface($configuration->getClass());
     }
 
     private function isInterface($class)
