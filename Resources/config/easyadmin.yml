@@ -1,4 +1,5 @@
 easy_admin:
+    translation_domain: 'admin'
     design:
         menu:
             -
@@ -7,4 +8,4 @@ easy_admin:
                 priority: 0
                 roles: ['ROLE_SUPER_ADMIN']
                 children:
-                    - { label: 'Dump database', route: 'krg_orm_admin_download', icon: 'database' }
+                    - { label: 'menu.dump_database', route: 'krg_orm_admin_download', icon: 'database' }
