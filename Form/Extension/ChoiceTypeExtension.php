@@ -42,7 +42,12 @@ class ChoiceTypeExtension extends AbstractTypeExtension
                         return call_user_func(array($this->enumTypes[$enumType]['class'], 'getChoices'));
                     }
                 }
-
+                return $value;
+            })
+            ->setNormalizer('choice_translation_domain', function (Options $options, $value) {
+                if ($options->offsetExists('enum')) {
+                    return $options->offsetGet('enum');
+                }
                 return $value;
             });
     }

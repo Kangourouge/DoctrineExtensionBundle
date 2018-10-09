@@ -12,6 +12,11 @@ services:
         tags: ['form.type']
         public: true
 
+    KRG\DoctrineExtensionBundle\Form\Extension\EntityTypeExtension:
+        public: true
+        tags:
+            - { name: form.type_extension, extended_type: Symfony\Component\Form\Extension\Core\Type\FormType }
+
     KRG\DoctrineExtensionBundle\Form\Extension\ChoiceTypeExtension:
         public: true
         tags:
@@ -26,3 +31,7 @@ services:
         decorates: sensio_framework_extra.converter.doctrine.orm
         arguments:
             $doctrineParamConverter: '@KRG\DoctrineExtensionBundle\Request\ParamConverter\DoctrineParamConverter.inner'
+
+    KRG\DoctrineExtensionBundle\Form\TypeGuesser\:
+        resource: '../../Form/TypeGuesser'
+        tags: ['form.type_guesser']

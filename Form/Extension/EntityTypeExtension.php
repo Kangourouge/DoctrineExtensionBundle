@@ -2,15 +2,16 @@
 
 namespace KRG\DoctrineExtensionBundle\Form\Extension;
 
-use Doctrine\Common\Persistence\ObjectManager;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadataFactory;
-use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractTypeExtension;
+use Symfony\Component\Form\Extension\Core\Type\FormType;
+use Symfony\Component\Form\FormTypeInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class EntityTypeExtension extends AbstractTypeExtension
 {
+
     /**
      * @var ClassMetadataFactory
      */
@@ -18,7 +19,6 @@ class EntityTypeExtension extends AbstractTypeExtension
 
     /**
      * EntityTypeExtension constructor.
-     *
      * @param EntityManagerInterface $entityManager
      */
     public function __construct(EntityManagerInterface $entityManager)
@@ -26,21 +26,54 @@ class EntityTypeExtension extends AbstractTypeExtension
         $this->classMetadataFactory = $entityManager->getMetadataFactory();
     }
 
+    /**
+     * @param OptionsResolver $resolver
+     */
     public function configureOptions(OptionsResolver $resolver)
     {
         parent::configureOptions($resolver);
-        $resolver->setNormalizer('class', function (OptionsResolver $resolver, $class) {
-            return $this->isInterface($class) && $this->classMetadataFactory->hasMetadataFor($class) ? $this->classMetadataFactory->getMetadataFor($class)->getName() : $class;
+
+        if (in_array('class', $resolver->getDefinedOptions())) {
+            $resolver->setNormalizer('class', function(OptionsResolver $resolver, $class) {
+                return $this->classNormalizer($resolver, $class);
+            });
+        }
+
+        $resolver->setNormalizer('data_class', function(OptionsResolver $resolver, $class) {
+            return $this->classNormalizer($resolver, $class);
         });
     }
 
-    private function isInterface($class)
+    /**
+     * @param OptionsResolver $resolver
+     * @param                 $class
+     * @return string
+     */
+    public function classNormalizer(OptionsResolver $resolver, $class)
     {
-        return preg_match('/^.+\\\Entity\\\.+Interface$/', $class);
+        if ($this->isInterface($class)) {
+            if ($classMetadata = $this->classMetadataFactory->getMetadataFor($class)) {
+                return $classMetadata->getName();
+            }
+        }
+
+        return $class;
     }
 
+    /**
+     * @param $class
+     * @return bool
+     */
+    private function isInterface($class)
+    {
+        return $class && interface_exists($class) && preg_match('/^.+\\\Entity\\\.+Interface$/', $class);
+    }
+
+    /**
+     * @return string
+     */
     public function getExtendedType()
     {
-        return EntityType::class;
+        return FormType::class;
     }
 }
