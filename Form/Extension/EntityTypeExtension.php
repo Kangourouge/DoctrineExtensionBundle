@@ -6,15 +6,11 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadataFactory;
 use Symfony\Component\Form\AbstractTypeExtension;
 use Symfony\Component\Form\Extension\Core\Type\FormType;
-use Symfony\Component\Form\FormTypeInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class EntityTypeExtension extends AbstractTypeExtension
 {
-
-    /**
-     * @var ClassMetadataFactory
-     */
+    /** @var ClassMetadataFactory */
     private $classMetadataFactory;
 
     /**
@@ -48,12 +44,14 @@ class EntityTypeExtension extends AbstractTypeExtension
      * @param OptionsResolver $resolver
      * @param                 $class
      * @return string
+     * @throws \Doctrine\Common\Persistence\Mapping\MappingException
+     * @throws \ReflectionException
      */
     public function classNormalizer(OptionsResolver $resolver, $class)
     {
         if ($this->isInterface($class)) {
-            if ($classMetadata = $this->classMetadataFactory->getMetadataFor($class)) {
-                return $classMetadata->getName();
+            if ($this->classMetadataFactory->hasMetadataFor($class)) {
+                return $this->classMetadataFactory->getMetadataFor($class)->getName();
             }
         }
 
