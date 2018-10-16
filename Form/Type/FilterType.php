@@ -4,38 +4,33 @@ namespace KRG\DoctrineExtensionBundle\Form\Type;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
-use Doctrine\Common\Persistence\ObjectManager;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
+use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\Extension\Core\Type\ResetType;
+use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\FormEvent;
 use Symfony\Component\Form\FormEvents;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
 /**
  * Class FilterType
- * @package KRG\DoctrineExtensionBundle\Form\Type
  */
 class FilterType extends AbstractType
 {
-    /**
-     * @var EntityManagerInterface
-     */
-    protected $entityManager;
+    /** @var EntityManagerInterface */
+    private $entityManager;
 
-    /**
-     * @var Request
-     */
-    protected $request;
+    /** @var RequestStack */
+    private $request;
 
     /**
      * FilterType constructor.
      *
      * @param EntityManagerInterface $entityManager
-     * @param RequestStack $requestStack
+     * @param RequestStack $request
      */
     public function __construct(EntityManagerInterface $entityManager, RequestStack $requestStack)
     {
@@ -56,11 +51,15 @@ class FilterType extends AbstractType
     /**
      * @param FormEvent $event
      */
-    public function onPreSetData(FormEvent $event) {
-
+    public function onPreSetData(FormEvent $event)
+    {
         $form = $event->getForm();
         $options = $form->getConfig()->getOptions();
-        $data = $event->getData() ?: array();
+        $data = $event->getData() ?: [];
+
+        if (isset($data['reset'])) {
+            $data = [];
+        }
 
         /** @var QueryBuilder $queryBuilder */
         $queryBuilder = $options['query_builder'];
@@ -73,46 +72,104 @@ class FilterType extends AbstractType
             }
         }
 
-        foreach($options['fields'] as $field => $data) {
+        foreach ($options['fields'] as $field => $data) {
             $choices = $this->getChoices($queryBuilder, $data);
-            $form->add($field, ChoiceType::class, array(
-                'choices' => $choices,
-                'required' => false,
-                'placeholder' => $data['placeholder'] ?? $field,
-                'label' => false
-            ));
+
+            $choices = array_flip($choices);
+
+            if (count($choices) > 1) {
+                $form->add(
+                    $field, ChoiceType::class, [
+                    'choices'     => $choices,
+                    'placeholder' => $data['placeholder'] ?? $field,
+                    'required'    => false,
+                    'label'       => false,
+                ]);
+            } else {
+                $form->add(
+                    $field, HiddenType::class, [
+                    'label' => false,
+                ]);
+            }
         }
 
-        $form->add('reset', ResetType::class);
+        $form->add('reset', SubmitType::class);
     }
 
     /**
      * @param QueryBuilder $queryBuilder
      * @param array $data
+     *
      * @return array
      */
-    protected function getChoices(QueryBuilder $queryBuilder, array $data) {
-        $property = $data['property'] ?? 'name';
-        $unique = isset($data['unique']) && $data['unique'];
+    protected function getChoices(QueryBuilder $queryBuilder, array $data)
+    {
+        // Handle multiple properties (ex: 'property' => ['width', 'height'])
+        if (false === isset($data['property'])) {
+            $_properties[] = 'name';
+        } elseif (is_string($data['property'])) {
+            $_properties[] = $data['property'];
+        } elseif (is_array($data['property'])) {
+            $_properties = $data['property'];
+        }
+
+        // Check properties existance
+        $properties = [];
+        $reflectionClass = $this->entityManager->getClassMetadata($data['class'])->getReflectionClass();
+        foreach ($_properties as $property) {
+            if ($reflectionClass->hasProperty($property)) {
+                $properties[] = $property;
+            }
+        }
 
         $queryBuilder = (clone $queryBuilder)
-                                ->resetDQLPart('select')
-                                ->resetDQLPart('groupBy')
-                                ->resetDQLPart('orderBy')
-                                ->select(
-                                    sprintf('MAX(%s.id) HIDDEN _', $queryBuilder->getRootAliases()[0]),
-                                    sprintf('%s.id', $data['alias']),
-                                    sprintf('%s.%s', $data['alias'], $property)
-                                )
-                                ->groupBy(sprintf('%s.id', $data['alias']))
-                                ->orderBy(sprintf('%s.%s', $data['alias'], $property), 'ASC');
+            ->resetDQLPart('select')
+            ->resetDQLPart('groupBy')
+            ->resetDQLPart('orderBy')
+            ->select(
+                sprintf('MAX(%s.id) HIDDEN _', $queryBuilder->getRootAliases()[0]),
+                sprintf('%s.id', $data['alias'])
+            )
+            ->groupBy(sprintf('%s.id', $data['alias']));
 
-        $result = $queryBuilder
-                    ->getQuery()
-                        ->getArrayResult();
+        foreach ($properties as $property) {
+            $queryBuilder
+                ->addSelect(sprintf('%s.%s', $data['alias'], $property))
+                ->orderBy(sprintf('%s.%s', $data['alias'], $property), 'ASC');
+        }
 
-        return array_column($result, $property, $unique ? $property : 'id');
+        $results = $queryBuilder
+            ->getQuery()
+            ->getArrayResult();
 
+        if (count($properties)) {
+            $unique = isset($data['unique']) && $data['unique'];
+
+            $choices = [];
+            foreach ($results as $row) {
+                $value = '';
+                foreach ($properties as $property) {
+                    // Concat properties values and delimiter (ex: 100 x 300)
+                    if ($row[$property]) {
+                        $value .= $row[$property];
+                        if ($property !== end($properties)) {
+                            $value .= $data['property_delimiter'] ?? '';
+                        }
+                    } else {
+                        $value = $data['placeholder'];
+                    }
+                }
+                $choices[$row[$unique ? $properties[0] : 'id']] = $value;
+            }
+        }
+
+        $choices = array_map(
+            function ($choice) {
+                return $choice ?: 'None';
+            }, $choices
+        );
+
+        return $choices;
     }
 
     /**
@@ -120,14 +177,10 @@ class FilterType extends AbstractType
      */
     public function configureOptions(OptionsResolver $resolver)
     {
-        $resolver->setDefaults(array(
-            'csrf_protection' => false,
-        ));
+        $resolver->setDefaults(array('csrf_protection' => false));
         $resolver->setRequired(['class', 'query_builder', 'fields']);
-        $resolver->setAllowedTypes([
-            'query_builder' => array(QueryBuilder::class, \Closure::class),
-            'class'         => 'string',
-            'fields'        => 'array',
-        ]);
+        $resolver->setAllowedTypes('query_builder', array(QueryBuilder::class, \Closure::class));
+        $resolver->setAllowedTypes('class', 'string');
+        $resolver->setAllowedTypes('fields', 'array');
     }
 }

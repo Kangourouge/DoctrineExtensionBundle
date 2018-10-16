@@ -21,6 +21,11 @@ services:
         public: true
         tags:
             - { name: form.type_extension, extended_type: Symfony\Component\Form\Extension\Core\Type\ChoiceType }
+            
+    KRG\DoctrineExtensionBundle\Form\Extension\HiddenTypeExtension:
+        public: true
+        tags:
+            - { name: form.type_extension, extended_type: Symfony\Component\Form\Extension\Core\Type\HiddenType }
 
     KRG\DoctrineExtensionBundle\Form\Extension\EasyAdminEntityTypeExtension:
         public: true
@@ -35,3 +40,8 @@ services:
     KRG\DoctrineExtensionBundle\Form\TypeGuesser\:
         resource: '../../Form/TypeGuesser'
         tags: ['form.type_guesser']
+
+#    KRG\DoctrineExtensionBundle\ORM\EntityManagerDecorator:
+#        public: false
+#        decorates: 'Doctrine\ORM\EntityManagerInterface'
+#        arguments: ['@KRG\DoctrineExtensionBundle\ORM\EntityManagerDecorator.inner']
