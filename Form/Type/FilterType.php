@@ -58,6 +58,7 @@ class FilterType extends AbstractType
         $data = $event->getData() ?: [];
 
         if (isset($data['reset'])) {
+            $event->setData([]);
             $data = [];
         }
 
