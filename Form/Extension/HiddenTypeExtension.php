@@ -30,7 +30,7 @@ class HiddenTypeExtension extends AbstractTypeExtension
             $className = $options['data_class'];
             $builder->addModelTransformer(new CallbackTransformer(
                 function ($value) {
-                    return $value !== null ? $value->getId() : null;
+                    return $value;
                 },
                 function ($value) use ($className) {
                     if (strlen($value) === 0) {
