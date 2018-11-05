@@ -4,6 +4,7 @@ namespace KRG\DoctrineExtensionBundle\Form\Type;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
+use KRG\DoctrineExtensionBundle\Entity\Sortable\SortableInterface;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\HiddenType;
@@ -134,9 +135,10 @@ class FilterType extends AbstractType
             ->groupBy(sprintf('%s.id', $data['alias']));
 
         foreach ($properties as $property) {
+            $orderBy = $reflectionClass->implementsInterface(SortableInterface::class) ? 'position' : $property;
             $queryBuilder
                 ->addSelect(sprintf('%s.%s', $data['alias'], $property))
-                ->orderBy(sprintf('%s.%s', $data['alias'], $property), 'ASC');
+                ->orderBy(sprintf('%s.%s', $data['alias'], $orderBy), 'ASC');
         }
 
         $results = $queryBuilder
