@@ -1,16 +1,21 @@
-{% block filter_widget %}
-    {{ form_widget(form) }}
+{% use '@KRGCore/form/theme/bootstrap_4_layout.html.twig' %}
+
+{% block form_widget %}
+    {{ parent() }}
+
     <script type="text/javascript">
         (function () {
             var form = document.forms.{{ form.vars.name }};
-            var reset = form.querySelector('button[type="reset"]');
-            var selects = form.querySelectorAll('select');
-            reset.addEventListener('click', function(event) {
-                Array.prototype.forEach.call(selects, function(select){
-                    select.selectedIndex = 0;
-                });
+            form.addEventListener('change', function (event) {
                 form.submit();
             });
         })();
     </script>
+{% endblock %}
+
+{% block choice_widget_collapsed %}
+    {{ parent() }}
+    {% if value|length > 0 %}
+        <button class="btn btn-danger" onclick="this.previousElementSibling.querySelector('select').selectedIndex = 0;">&times;</button>
+    {% endif %}
 {% endblock %}

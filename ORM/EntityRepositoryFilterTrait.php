@@ -17,10 +17,10 @@ trait EntityRepositoryFilterTrait
             }
 
             if (isset($columns[$key])) {
-                if (is_numeric($value) && (int)$value === 0) {
+                if (is_numeric($value) && (int) $value === 0) {
                     $queryBuilder->andWhere(sprintf('%s is null', $columns[$key]));
                 } else {
-                    $parameter = $key.uniqid();
+                    $parameter = $key . uniqid();
                     $operator = is_array($value) || $value instanceof Collection ? 'in' : '=';
                     $queryBuilder->andWhere(sprintf('%s %s (:%s)', $columns[$key], $operator, $parameter))
                         ->setParameter($parameter, $value);

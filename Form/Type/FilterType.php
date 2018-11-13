@@ -4,16 +4,17 @@ namespace KRG\DoctrineExtensionBundle\Form\Type;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
-use KRG\DoctrineExtensionBundle\Entity\Sortable\SortableInterface;
+use KRG\DoctrineExtensionBundle\Form\DataTransformer\FilterDataTransformer;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\DataTransformerInterface;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
-use Symfony\Component\Form\Extension\Core\Type\HiddenType;
-use Symfony\Component\Form\Extension\Core\Type\ResetType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\FormEvent;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpFoundation\Session\SessionInterface;
+use Symfony\Component\OptionsResolver\Options;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
 /**
@@ -27,16 +28,29 @@ class FilterType extends AbstractType
     /** @var RequestStack */
     private $request;
 
+    /** @var SessionInterface */
+    private $session;
+
     /**
      * FilterType constructor.
      *
      * @param EntityManagerInterface $entityManager
-     * @param RequestStack $request
+     * @param RequestStack $requestStack
+     * @param SessionInterface $session
      */
-    public function __construct(EntityManagerInterface $entityManager, RequestStack $requestStack)
+    public function __construct(EntityManagerInterface $entityManager, RequestStack $requestStack, SessionInterface $session)
     {
         $this->entityManager = $entityManager;
         $this->request = $requestStack->getCurrentRequest();
+        $this->session = $session;
+    }
+
+    /**
+     * @return string
+     */
+    public function getSessionKey()
+    {
+        return sprintf('Filter/%s%s', $this->getBlockPrefix(), $this->request->getPathInfo());
     }
 
     /**
@@ -45,8 +59,13 @@ class FilterType extends AbstractType
      */
     public function buildForm(FormBuilderInterface $builder, array $options)
     {
-        $event = $this->request->isMethod('GET') ? FormEvents::PRE_SET_DATA : FormEvents::PRE_SUBMIT;
-        $builder->addEventListener($event, array($this, 'onPreSetData'));
+        if ($this->request->isMethod('GET')) {
+            $builder->addEventListener(FormEvents::PRE_SET_DATA, array($this, 'onPreSetData'));
+        } else {
+            $builder->addEventListener(FormEvents::PRE_SUBMIT, array($this, 'onPreSubmit'));
+        }
+
+        $builder->addModelTransformer(new FilterDataTransformer($options['fields']));
     }
 
     /**
@@ -54,18 +73,45 @@ class FilterType extends AbstractType
      */
     public function onPreSetData(FormEvent $event)
     {
-        $form = $event->getForm();
-        $options = $form->getConfig()->getOptions();
-        $data = $event->getData() ?: [];
+        $data = $event->getData() ?: $this->session->get($this->getSessionKey(), []);
+        $event->setData($data);
+        $this->handle($event);
+    }
+
+    /**
+     * @param FormEvent $event
+     */
+    public function onPreSubmit(FormEvent $event)
+    {
+        $data = $event->getData();
 
         if (isset($data['reset'])) {
-            $event->setData([]);
             $data = [];
         }
 
+        $event->setData($data);
+
+        $this->session->set($this->getSessionKey(), $data);
+
+        $this->handle($event);
+    }
+
+    /**
+     * @param FormEvent $event
+     */
+    public function handle(FormEvent $event)
+    {
+        $form = $event->getForm();
+        $options = $form->getConfig()->getOptions();
+        $data = $event->getData();
+
+        $fields = $event->getForm()->getConfig()->getOption('fields');
+        $transformer = new FilterDataTransformer($fields);
+
+        $data = $transformer->reverseTransform($data);
+
         /** @var QueryBuilder $queryBuilder */
         $queryBuilder = $options['query_builder'];
-
         if ($queryBuilder instanceof \Closure) {
             $queryBuilder = $queryBuilder->call($this, $this->entityManager->getRepository($options['class']), $data);
 
@@ -74,24 +120,22 @@ class FilterType extends AbstractType
             }
         }
 
-        foreach ($options['fields'] as $field => $data) {
-            $choices = $this->getChoices($queryBuilder, $data);
+        $data = $transformer->transform($data);
 
-            $choices = array_flip($choices);
+        $rows = $this->getRows($queryBuilder, $options['fields']);
 
-            if (count($choices) > 1) {
-                $form->add(
-                    $field, ChoiceType::class, [
-                    'choices'     => $choices,
-                    'placeholder' => $data['placeholder'] ?? $field,
-                    'required'    => false,
-                    'label'       => false,
-                ]);
-            } else {
-                $form->add(
-                    $field, HiddenType::class, [
-                    'label' => false,
-                ]);
+        foreach ($options['fields'] as $field => $config) {
+            if (count($rows[$field]) > 1 || isset($data[$field])) {
+                $options = [
+                    'choices'  => $rows[$field],
+                    'required' => false,
+                    'label'    => false,
+                    'data'     => $data[$field] ?? null,
+                ];
+
+                $options = array_replace_recursive(['placeholder' => strtoupper($field)], $config['options'] ?? [], $options);
+
+                $form->add($field, ChoiceType::class, $options);
             }
         }
 
@@ -100,79 +144,83 @@ class FilterType extends AbstractType
 
     /**
      * @param QueryBuilder $queryBuilder
-     * @param array $data
+     * @param array $fields
      *
      * @return array
      */
-    protected function getChoices(QueryBuilder $queryBuilder, array $data)
+    protected function getRows(QueryBuilder $queryBuilder, array $fields)
     {
-        // Handle multiple properties (ex: 'property' => ['width', 'height'])
-        if (false === isset($data['property'])) {
-            $_properties[] = 'name';
-        } elseif (is_string($data['property'])) {
-            $_properties[] = $data['property'];
-        } elseif (is_array($data['property'])) {
-            $_properties = $data['property'];
-        }
-
-        // Check properties existance
-        $properties = [];
-        $reflectionClass = $this->entityManager->getClassMetadata($data['class'])->getReflectionClass();
-        foreach ($_properties as $property) {
-            if ($reflectionClass->hasProperty($property)) {
-                $properties[] = $property;
-            }
-        }
+        $rootAlias = $queryBuilder->getRootAliases()[0];
 
         $queryBuilder = (clone $queryBuilder)
+            ->distinct()
             ->resetDQLPart('select')
-            ->resetDQLPart('groupBy')
-            ->resetDQLPart('orderBy')
-            ->select(
-                sprintf('MAX(%s.id) HIDDEN _', $queryBuilder->getRootAliases()[0]),
-                sprintf('%s.id', $data['alias'])
-            )
-            ->groupBy(sprintf('%s.id', $data['alias']));
+            ->resetDQLPart('orderBy');
 
-        foreach ($properties as $property) {
-            $orderBy = $reflectionClass->implementsInterface(SortableInterface::class) ? 'position' : $property;
-            $queryBuilder
-                ->addSelect(sprintf('%s.%s', $data['alias'], $property))
-                ->orderBy(sprintf('%s.%s', $data['alias'], $orderBy), 'ASC');
-        }
-
-        $results = $queryBuilder
-            ->getQuery()
-            ->getArrayResult();
-
-        if (count($properties)) {
-            $unique = isset($data['unique']) && $data['unique'];
-
-            $choices = [];
-            foreach ($results as $row) {
-                $value = '';
-                foreach ($properties as $property) {
-                    // Concat properties values and delimiter (ex: 100 x 300)
-                    if ($row[$property]) {
-                        $value .= $row[$property];
-                        if ($property !== end($properties)) {
-                            $value .= $data['property_delimiter'] ?? '';
-                        }
-                    } else {
-                        $value = $data['placeholder'];
-                    }
-                }
-                $choices[$row[$unique ? $properties[0] : 'id']] = $value;
+        foreach ($fields as $field => $config) {
+            $alias = $config['alias'] ?? $rootAlias;
+            foreach ($config['select'] as $property => $name) {
+                $queryBuilder->addSelect(sprintf('%s.%s as %s', $alias, $property, $name));
             }
         }
 
-        $choices = array_map(
-            function ($choice) {
-                return $choice ?: 'None';
-            }, $choices
-        );
+        $results = $queryBuilder->getQuery()->getArrayResult();
 
-        return $choices;
+        $rows = [];
+
+        foreach ($fields as $field => $config) {
+
+            $_rows = [];
+            $identifier = $config['select'][$config['identifier']];
+
+            foreach ($results as $data) {
+                $select = array_flip($config['select']);
+
+                $idx = $data[$identifier] ?? $config['empty_value'];
+
+                if (!isset($_rows[$idx])) {
+                    $_rows[$idx] = array_combine($select, array_intersect_key($data, $select));
+                }
+            }
+
+            $orderBy = $config['orderBy'];
+
+            usort($_rows, function ($row1, $row2) use ($orderBy) {
+                if ($row1[$orderBy] === null) {
+                    return -1;
+                }
+                if ($row2[$orderBy] === null) {
+                    return 1;
+                }
+                if ($row1[$orderBy] === $row2[$orderBy]) {
+                    return 0;
+                }
+
+                return $row1[$orderBy] > $row2[$orderBy] ? 1 : -1;
+            });
+
+            $rows[$field] = [];
+            $properties = array_flip($config['properties']);
+            $identifier = $config['identifier'];
+            foreach ($_rows as $row) {
+                if ($row[$identifier] === null) {
+                    $rows[$field][$config['empty_label']] = $config['empty_value'];
+                }
+                else if (is_bool($row[$identifier])) {
+                    $rows[$field][$row[$identifier] ? 'Yes' : 'No'] = (int) $row[$identifier];
+                }
+                else {
+                    $args = array_intersect_key($row, $properties);
+                    array_unshift($args, $config['format']);
+
+                    $value = call_user_func_array('sprintf', $args);
+
+                    $rows[$field][$value] = $row[$identifier];
+                }
+            }
+        }
+
+        return $rows;
     }
 
     /**
@@ -185,5 +233,39 @@ class FilterType extends AbstractType
         $resolver->setAllowedTypes('query_builder', array(QueryBuilder::class, \Closure::class));
         $resolver->setAllowedTypes('class', 'string');
         $resolver->setAllowedTypes('fields', 'array');
+
+        $resolver->setNormalizer('fields', function (Options $options, array $fields){
+            $classMetadata = $this->entityManager->getClassMetadata($options->offsetGet('class'));
+
+            foreach ($fields as $field => &$config) {
+                $isAssociation = $classMetadata->hasAssociation($field) || isset($config['alias']);
+                $type = $classMetadata->getTypeOfField($field);
+
+                $isScalar = !$isAssociation && ($type === 'boolean' || substr($type, -5) === '_enum');
+
+                $config = array_merge(
+                    [
+                        'properties'  => [$isScalar ? $field : 'name'],
+                        'format'      => '%1$s',
+                        'empty_value' => 0,
+                        'empty_label' => 'None',
+                        'identifier'  => $isScalar ? $field : 'id',
+                        'orderBy'     => $isScalar ? $field : 'name',
+                        'alias'       => $isAssociation ? $field : null,
+                        'type'        => $type
+                    ], $config
+                );
+
+                $select = array_unique(array_merge($config['properties'], [$config['orderBy']], [$config['identifier']]));
+
+                $config['select'] = [];
+                foreach ($select as $property) {
+                    $config['select'][$property] = sprintf('%s_%s', $field, $property);
+                }
+            }
+            unset($config);
+
+            return $fields;
+        });
     }
 }

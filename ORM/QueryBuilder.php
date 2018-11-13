@@ -5,10 +5,28 @@ namespace KRG\DoctrineExtensionBundle\ORM;
 use Doctrine\ORM\Query;
 use Doctrine\ORM\Query\Expr\Join;
 use Doctrine\ORM\Query\Expr\Select;
+use KRG\DoctrineExtensionBundle\Entity\Constraint\EntityConstraintInterface;
+use KRG\DoctrineExtensionBundle\ORM\Query\Filter\ConstraintFilter;
 
 class QueryBuilder extends \Doctrine\ORM\QueryBuilder
 {
-    public function getQuery(bool $autoJoin = false)
+    public function getQuery()
+    {
+        /** @var Query\Parameter $parameter */
+        foreach($this->getParameters() as $parameter) {
+            if ($parameter->getValue() instanceof EntityConstraintInterface) {
+                /** @var ConstraintFilter $filter */
+                $filter = $this->getEntityManager()->getFilters()->getFilter('constraint_filter');
+                $filter->setConstraints($parameter->getValue()->getArrayConstraints(), true);
+            }
+        }
+
+        $query = parent::getQuery();
+
+        return $query;
+    }
+
+    private function getAutoJoinQuery()
     {
         if (!$autoJoin) {
             return parent::getQuery();
@@ -43,9 +61,29 @@ class QueryBuilder extends \Doctrine\ORM\QueryBuilder
         foreach ($select as $key => $value) {
             parent::addSelect(sprintf('%s as %s', $value, $key));
         }
-        $query = parent::getQuery();
+
         // $query->setHydrationMode('recuresive_array');
-        return $query;
+    }
+
+    public function getAllEntities()
+    {
+        $classes = array_combine($this->getRootAliases(), $this->getRootEntities());
+
+        $joins = $this->getDQLPart('join');
+        /** @var Join $join */
+        foreach ($joins as $rootAlias => $_joins) {
+            foreach ($_joins as $join) {
+                $class = $join->getJoin();
+                if (preg_match('/([^\.]+)\.([^\.]+)/', $class, $match)) {
+                    if (isset($classes[$match[1]])) {
+                        $class = $this->getEntityManager()->getClassMetadata($classes[$match[1]])->getAssociationTargetClass($match[2]);
+                    }
+                }
+                $classes[$join->getAlias()] = $class;
+            }
+        }
+
+        return $classes;
     }
 
     private function _addSelectPath($property)
