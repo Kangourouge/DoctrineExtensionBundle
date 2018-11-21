@@ -23,7 +23,7 @@ trait EntityRepositoryFilterTrait
                     $parameter = $key . uniqid();
                     $operator = is_array($value) || $value instanceof Collection ? 'in' : '=';
                     $queryBuilder->andWhere(sprintf('%s %s (:%s)', $columns[$key], $operator, $parameter))
-                        ->setParameter($parameter, $value);
+                                    ->setParameter($parameter, $value);
                 }
             }
         }

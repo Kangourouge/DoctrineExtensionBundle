@@ -6,12 +6,15 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 use KRG\DoctrineExtensionBundle\Form\DataTransformer\FilterDataTransformer;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\ChoiceList\ArrayChoiceList;
+use Symfony\Component\Form\ChoiceList\ChoiceListInterface;
 use Symfony\Component\Form\DataTransformerInterface;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\FormEvent;
 use Symfony\Component\Form\FormEvents;
+use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\OptionsResolver\Options;
@@ -64,8 +67,6 @@ class FilterType extends AbstractType
         } else {
             $builder->addEventListener(FormEvents::PRE_SUBMIT, array($this, 'onPreSubmit'));
         }
-
-        $builder->addModelTransformer(new FilterDataTransformer($options['fields']));
     }
 
     /**
@@ -91,6 +92,8 @@ class FilterType extends AbstractType
 
         $event->setData($data);
 
+        $form = $event->getForm();
+
         $this->session->set($this->getSessionKey(), $data);
 
         $this->handle($event);
@@ -106,9 +109,14 @@ class FilterType extends AbstractType
         $data = $event->getData();
 
         $fields = $event->getForm()->getConfig()->getOption('fields');
-        $transformer = new FilterDataTransformer($fields);
+        foreach ($data as $key => &$value) {
+            if (isset($fields[$key]) && $fields[$key]['type'] === 'boolean') {
+                $value = is_numeric($value) ? (bool)(int) $value : null;
+            }
+        }
+        unset($value);
 
-        $data = $transformer->reverseTransform($data);
+        $fields = $event->getForm()->getConfig()->getOption('fields');
 
         /** @var QueryBuilder $queryBuilder */
         $queryBuilder = $options['query_builder'];
@@ -120,10 +128,15 @@ class FilterType extends AbstractType
             }
         }
 
-        $data = $transformer->transform($data);
-
         $rows = $this->getRows($queryBuilder, $options['fields']);
 
+        $this->addChoices($form, $rows, $data, $options);
+
+        $form->add('reset', SubmitType::class);
+    }
+
+    protected function addChoices(FormInterface $form, array $rows, array $data, array $options)
+    {
         foreach ($options['fields'] as $field => $config) {
             if (count($rows[$field]) > 1 || isset($data[$field])) {
                 $options = [
@@ -138,8 +151,6 @@ class FilterType extends AbstractType
                 $form->add($field, ChoiceType::class, $options);
             }
         }
-
-        $form->add('reset', SubmitType::class);
     }
 
     /**
@@ -207,7 +218,7 @@ class FilterType extends AbstractType
                     $rows[$field][$config['empty_label']] = $config['empty_value'];
                 }
                 else if (is_bool($row[$identifier])) {
-                    $rows[$field][$row[$identifier] ? 'Yes' : 'No'] = (int) $row[$identifier];
+                    $rows[$field][$row[$identifier] ? 'Yes' : 'No'] = (bool)(int) $row[$identifier];
                 }
                 else {
                     $args = array_intersect_key($row, $properties);
