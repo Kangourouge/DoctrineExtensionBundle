@@ -138,7 +138,7 @@ class FilterType extends AbstractType
     protected function addChoices(FormInterface $form, array $rows, array $data, array $options)
     {
         foreach ($options['fields'] as $field => $config) {
-            if (count($rows[$field]) > 1 || isset($data[$field])) {
+            if (count($rows[$field]) > 0 || isset($data[$field])) {
                 $options = [
                     'choices'  => $rows[$field],
                     'required' => false,
