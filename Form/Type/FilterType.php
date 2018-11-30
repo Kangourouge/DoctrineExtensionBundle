@@ -139,11 +139,14 @@ class FilterType extends AbstractType
     {
         foreach ($options['fields'] as $field => $config) {
             if (count($rows[$field]) > 0 || isset($data[$field])) {
+                $isEnum = strpos($config['type'], '_enum') === strlen($config['type']) - strlen('_enum');
+
                 $options = [
-                    'choices'  => $rows[$field],
-                    'required' => false,
-                    'label'    => false,
-                    'data'     => $data[$field] ?? null,
+                    'choices'                   => $rows[$field],
+                    'required'                  => false,
+                    'label'                     => false,
+                    'data'                      => $data[$field] ?? null,
+                    'choice_translation_domain' => $isEnum ? $config['choice_translation_domain'] ?? $config['type'] : null,
                 ];
 
                 $options = array_replace_recursive(['placeholder' => strtoupper($field)], $config['options'] ?? [], $options);
