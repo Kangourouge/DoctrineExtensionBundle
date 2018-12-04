@@ -62,11 +62,8 @@ class FilterType extends AbstractType
      */
     public function buildForm(FormBuilderInterface $builder, array $options)
     {
-        if ($this->request->isMethod('GET')) {
-            $builder->addEventListener(FormEvents::PRE_SET_DATA, array($this, 'onPreSetData'));
-        } else {
-            $builder->addEventListener(FormEvents::PRE_SUBMIT, array($this, 'onPreSubmit'));
-        }
+        $builder->addEventListener(FormEvents::PRE_SET_DATA, array($this, 'onPreSetData'));
+        $builder->addEventListener(FormEvents::PRE_SUBMIT, array($this, 'onPreSubmit'));
     }
 
     /**
@@ -74,8 +71,10 @@ class FilterType extends AbstractType
      */
     public function onPreSetData(FormEvent $event)
     {
-        $data = $event->getData() ?: $this->session->get($this->getSessionKey(), []);
-        $event->setData($data);
+        if ($this->request->isMethod('GET')) {
+            $data = $event->getData() ?: $this->session->get($this->getSessionKey(), []);
+            $event->setData([]);
+        }
         $this->handle($event);
     }
 
@@ -169,7 +168,10 @@ class FilterType extends AbstractType
         $queryBuilder = (clone $queryBuilder)
             ->distinct()
             ->resetDQLPart('select')
+            ->resetDQLPart('where') // WIP not sure to see with @emc
             ->resetDQLPart('orderBy');
+
+        $queryBuilder->setParameters([]); // WIP not sure to see with @emc
 
         foreach ($fields as $field => $config) {
             $alias = $config['alias'] ?? $rootAlias;
