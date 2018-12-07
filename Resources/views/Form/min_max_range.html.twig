@@ -1,0 +1,12 @@
+{% block min_max_range_widget %}
+    <input type="text" class="min-max-slider"
+           data-from="{{ form.price_min.vars.value|round(0) }}"
+            {% if form.price_max.vars.value|round(0) > 0 %} data-to="{{ form.price_max.vars.value|round(0) }}"{% endif %}
+           data-target-min="{{ form.price_min.vars.id }}" data-target-max="{{ form.price_max.vars.id }}">
+
+    <div class="d-none">
+        {% for child in form.children %}
+            {{ form(form) }}
+        {% endfor %}
+    </div>
+{% endblock %}

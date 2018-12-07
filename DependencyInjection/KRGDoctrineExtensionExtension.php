@@ -24,6 +24,7 @@ class KRGDoctrineExtensionExtension extends Extension implements PrependExtensio
         $container->prependExtensionConfig('twig', [
             'form_themes' => [
                 'KRGDoctrineExtensionBundle:Form:phone_number.html.twig',
+                'KRGDoctrineExtensionBundle:Form:min_max_range.html.twig',
             ]
         ]);
     }

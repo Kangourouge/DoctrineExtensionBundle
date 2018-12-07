@@ -25,6 +25,7 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
  */
 class FilterType extends AbstractType
 {
+
     /** @var EntityManagerInterface */
     private $entityManager;
 
@@ -62,8 +63,11 @@ class FilterType extends AbstractType
      */
     public function buildForm(FormBuilderInterface $builder, array $options)
     {
-        $builder->addEventListener(FormEvents::PRE_SET_DATA, array($this, 'onPreSetData'));
-        $builder->addEventListener(FormEvents::PRE_SUBMIT, array($this, 'onPreSubmit'));
+        if ($this->request->isMethod('GET')) {
+            $builder->addEventListener(FormEvents::PRE_SET_DATA, array($this, 'onPreSetData'));
+        } else {
+            $builder->addEventListener(FormEvents::PRE_SUBMIT, array($this, 'onPreSubmit'));
+        }
     }
 
     /**
@@ -71,10 +75,9 @@ class FilterType extends AbstractType
      */
     public function onPreSetData(FormEvent $event)
     {
-        if ($this->request->isMethod('GET')) {
-            $data = $event->getData() ?: $this->session->get($this->getSessionKey(), []);
-            $event->setData([]);
-        }
+        $data = $event->getData() ?: $this->session->get($this->getSessionKey(), []);
+        $event->setData($data);
+
         $this->handle($event);
     }
 
@@ -110,7 +113,7 @@ class FilterType extends AbstractType
         $fields = $event->getForm()->getConfig()->getOption('fields');
         foreach ($data as $key => &$value) {
             if (isset($fields[$key]) && $fields[$key]['type'] === 'boolean') {
-                $value = is_numeric($value) ? (bool)(int) $value : null;
+                $value = is_numeric($value) ? (bool)(int)$value : null;
             }
         }
         unset($value);
@@ -120,12 +123,16 @@ class FilterType extends AbstractType
         /** @var QueryBuilder $queryBuilder */
         $queryBuilder = $options['query_builder'];
         if ($queryBuilder instanceof \Closure) {
+            $minimal = $event->getForm()->getConfig()->getOption('minimal');
+            $data = $minimal ? $data : [];
+
             $queryBuilder = $queryBuilder->call($this, $this->entityManager->getRepository($options['class']), $data);
 
             if (!$queryBuilder instanceof QueryBuilder) {
                 throw new \RuntimeException('Form option "query_builder" closure must return QueryBuilder instance');
             }
         }
+
 
         $rows = $this->getRows($queryBuilder, $options['fields']);
 
@@ -146,17 +153,29 @@ class FilterType extends AbstractType
             if (count($rows[$field]) > 0 || isset($data[$field])) {
                 $isEnum = strpos($config['type'], '_enum') === strlen($config['type']) - strlen('_enum');
 
-                $options = [
-                    'choices'                   => $rows[$field],
-                    'required'                  => false,
-                    'label'                     => false,
-                    'data'                      => $data[$field] ?? null,
-                    'choice_translation_domain' => $isEnum ? $config['choice_translation_domain'] ?? $config['type'] : null,
-                ];
+                $options = [];
+                if (!$form->getConfig()->getOption('label')) {
+                    $options['label'] = false;
+                }
 
-                $options = array_replace_recursive(['placeholder' => strtoupper($field)], $config['options'] ?? [], $options);
 
-                $form->add($field, ChoiceType::class, $options);
+                if ($config['type'] && $config['type'] == 'integer') {
+                    $form->add($field, MinMaxRangeType::class, $options);
+                } else {
+                    $options = array_replace_recursive(
+                        [
+                            'choices' => $rows[$field],
+                            'choice_translation_domain' => $isEnum ? $config['choice_translation_domain'] ?? $config['type'] : null,
+                            'data' => $data[$field] ?? null,
+                            'placeholder' => strtoupper($field),
+                            'multiple' => $form->getConfig()->getOption('multiple'),
+                        ],
+                        $options,
+                        $config['options'] ?? []
+                    );
+
+                    $form->add($field, ChoiceType::class, $options);
+                }
             }
         }
     }
@@ -174,10 +193,8 @@ class FilterType extends AbstractType
         $queryBuilder = (clone $queryBuilder)
             ->distinct()
             ->resetDQLPart('select')
-            ->resetDQLPart('where') // WIP not sure to see with @emc
             ->resetDQLPart('orderBy');
 
-        $queryBuilder->setParameters([]); // WIP not sure to see with @emc
 
         foreach ($fields as $field => $config) {
             $alias = $config['alias'] ?? $rootAlias;
@@ -227,11 +244,9 @@ class FilterType extends AbstractType
             foreach ($_rows as $row) {
                 if ($row[$identifier] === null) {
                     $rows[$field][$config['empty_label']] = $config['empty_value'];
-                }
-                else if (is_bool($row[$identifier])) {
-                    $rows[$field][$row[$identifier] ? 'Yes' : 'No'] = (bool)(int) $row[$identifier];
-                }
-                else {
+                } else if (is_bool($row[$identifier])) {
+                    $rows[$field][$row[$identifier] ? 'Yes' : 'No'] = (bool)(int)$row[$identifier];
+                } else {
                     $args = array_intersect_key($row, $properties);
                     array_unshift($args, $config['format']);
 
@@ -250,13 +265,19 @@ class FilterType extends AbstractType
      */
     public function configureOptions(OptionsResolver $resolver)
     {
-        $resolver->setDefaults(array('csrf_protection' => false));
         $resolver->setRequired(['class', 'query_builder', 'fields']);
+        $resolver->setDefined(['multiple', 'session', 'minimal']);
         $resolver->setAllowedTypes('query_builder', array(QueryBuilder::class, \Closure::class));
         $resolver->setAllowedTypes('class', 'string');
         $resolver->setAllowedTypes('fields', 'array');
+        $resolver->setAllowedTypes('label', 'boolean');
+        $resolver->setAllowedTypes('multiple', 'boolean');
+        $resolver->setAllowedTypes('session', 'boolean');
+        $resolver->setAllowedTypes('minimal', 'boolean');
 
-        $resolver->setNormalizer('fields', function (Options $options, array $fields){
+        $resolver->setDefaults(['multiple' => false, 'minimal' => false, 'session' => true, 'label' => false]);
+
+        $resolver->setNormalizer('fields', function (Options $options, array $fields) {
             $classMetadata = $this->entityManager->getClassMetadata($options->offsetGet('class'));
 
             foreach ($fields as $field => &$config) {
@@ -267,14 +288,15 @@ class FilterType extends AbstractType
 
                 $config = array_merge(
                     [
-                        'properties'  => [$isScalar ? $field : 'name'],
-                        'format'      => '%1$s',
+                        'properties' => [$isScalar ? $field : 'name'],
+                        'format' => '%1$s',
                         'empty_value' => 0,
                         'empty_label' => 'None',
-                        'identifier'  => $isScalar ? $field : 'id',
-                        'orderBy'     => $isScalar ? $field : 'name',
-                        'alias'       => $isAssociation ? $field : null,
-                        'type'        => $type
+                        'identifier' => $isScalar ? $field : 'id',
+                        'orderBy' => $isScalar ? $field : 'name',
+                        'alias' => $isAssociation ? $field : null,
+                        'required' => false,
+                        'type' => $type
                     ], $config
                 );
 
