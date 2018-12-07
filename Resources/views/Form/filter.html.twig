@@ -3,14 +3,16 @@
 {% block form_widget %}
     {{ parent() }}
 
-    <script type="text/javascript">
-        (function () {
-            var form = document.forms.{{ form.vars.name }};
-            form.addEventListener('change', function (event) {
-                form.submit();
-            });
-        })();
-    </script>
+    {% if form.parent is null %}
+        <script type="text/javascript">
+            (function () {
+                var form = document.forms.{{ form.vars.name }};
+                form.addEventListener('change', function (event) {
+                    form.submit();
+                });
+            })();
+        </script>
+    {% endif %}
 {% endblock %}
 
 {% block choice_widget_collapsed %}
