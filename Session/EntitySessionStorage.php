@@ -2,8 +2,8 @@
 
 namespace KRG\DoctrineExtensionBundle\Session;
 
-use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
 /**
  * Class EntitySessionStorage

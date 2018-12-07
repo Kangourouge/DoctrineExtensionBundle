@@ -36,4 +36,9 @@ interface EntityConstraintInterface
      * @return EntityConstraintInterface
      */
     public function setArrayConstraints(array $constraints);
+
+    /**
+     * @return array
+     */
+    public static function getConstraintClasses();
 }

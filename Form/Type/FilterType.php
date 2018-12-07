@@ -134,6 +134,12 @@ class FilterType extends AbstractType
         $form->add('reset', SubmitType::class);
     }
 
+    /**
+     * @param FormInterface $form
+     * @param array $rows
+     * @param array $data
+     * @param array $options
+     */
     protected function addChoices(FormInterface $form, array $rows, array $data, array $options)
     {
         foreach ($options['fields'] as $field => $config) {
