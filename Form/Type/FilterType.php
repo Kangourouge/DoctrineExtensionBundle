@@ -179,6 +179,7 @@ class FilterType extends AbstractType
                             'data' => $data[$field] ?? null,
                             'placeholder' => strtoupper($field),
                             'multiple' => $form->getConfig()->getOption('multiple'),
+                            'required' => false
                         ],
                         $options,
                         $config['options'] ?? []
