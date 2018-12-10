@@ -1,12 +1,11 @@
 {% block min_max_range_widget %}
-    <input type="text" class="min-max-slider"
-           data-from="{{ form.price_min.vars.value|round(0) }}"
-            {% if form.price_max.vars.value|round(0) > 0 %} data-to="{{ form.price_max.vars.value|round(0) }}"{% endif %}
-           data-target-min="{{ form.price_min.vars.id }}" data-target-max="{{ form.price_max.vars.id }}">
+    {% set name = form.vars.name %}
+    <input type="text" class="min-max-slider d-none"
+           data-from="{{ attribute(form, name~'_from').vars.value|round(0) }}" data-min="{{ attribute(form, name~'_min').vars.value|round(0) }}"
+           {% if attribute(form, name~'_to').vars.value|round(0) > 0 %}data-to="{{ attribute(form, name~'_to').vars.value|round(0) }}" {% endif %} data-max="{{ attribute(form, name~'_max').vars.value|round(0) }}"
+           data-target-min="{{ attribute(form, name~'_from').vars.id }}" data-target-max="{{ attribute(form, name~'_to').vars.id }}">
 
     <div class="d-none">
-        {% for child in form.children %}
-            {{ form(form) }}
-        {% endfor %}
+        {{ form(form) }}
     </div>
 {% endblock %}

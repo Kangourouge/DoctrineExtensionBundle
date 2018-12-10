@@ -4,7 +4,6 @@ namespace KRG\DoctrineExtensionBundle\Form\Type;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
-use KRG\DoctrineExtensionBundle\Form\DataTransformer\FilterDataTransformer;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\ChoiceList\ArrayChoiceList;
 use Symfony\Component\Form\ChoiceList\ChoiceListInterface;
@@ -89,12 +88,18 @@ class FilterType extends AbstractType
         $data = $event->getData();
 
         if (isset($data['reset'])) {
-            $data = [];
+            $fields = $event->getForm()->getConfig()->getOption('fields');
+            foreach ($fields as $name => $field) {
+                if ($field['type'] !== 'integer') {
+                    unset($data[$name]);
+                } else {
+                    unset($data[$name][$name.'_from']);
+                    unset($data[$name][$name.'_to']);
+                }
+            }
         }
 
         $event->setData($data);
-
-        $form = $event->getForm();
 
         $this->session->set($this->getSessionKey(), $data);
 
@@ -133,7 +138,6 @@ class FilterType extends AbstractType
             }
         }
 
-
         $rows = $this->getRows($queryBuilder, $options['fields']);
 
         $this->addChoices($form, $rows, $data, $options);
@@ -158,8 +162,14 @@ class FilterType extends AbstractType
                     $options['label'] = false;
                 }
 
-
                 if ($config['type'] && $config['type'] == 'integer') {
+                    $options = array_replace_recursive(
+                        [
+                            'data' => $rows[$field],
+                        ],
+                        $options
+                    );
+
                     $form->add($field, MinMaxRangeType::class, $options);
                 } else {
                     $options = array_replace_recursive(
@@ -246,6 +256,17 @@ class FilterType extends AbstractType
                     $rows[$field][$config['empty_label']] = $config['empty_value'];
                 } else if (is_bool($row[$identifier])) {
                     $rows[$field][$row[$identifier] ? 'Yes' : 'No'] = (bool)(int)$row[$identifier];
+                }  else if ($config['type'] == 'integer') {
+                    $args = array_intersect_key($row, $properties);
+                    foreach ($args as $property => $value) {
+                        if (!isset($rows[$field]['min']) || $value < $rows[$field]['min']) {
+                            $rows[$field]['min'] = $value;
+                        }
+                        if (!isset($rows[$field]['max']) || $value > $rows[$field]['max']) {
+                            $rows[$field]['max'] = $value;
+                        }
+                    }
+
                 } else {
                     $args = array_intersect_key($row, $properties);
                     array_unshift($args, $config['format']);
@@ -275,7 +296,7 @@ class FilterType extends AbstractType
         $resolver->setAllowedTypes('session', 'boolean');
         $resolver->setAllowedTypes('minimal', 'boolean');
 
-        $resolver->setDefaults(['multiple' => false, 'minimal' => false, 'session' => true, 'label' => false]);
+        $resolver->setDefaults(['multiple' => false, 'minimal' => true, 'session' => true, 'label' => false]);
 
         $resolver->setNormalizer('fields', function (Options $options, array $fields) {
             $classMetadata = $this->entityManager->getClassMetadata($options->offsetGet('class'));

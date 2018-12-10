@@ -19,6 +19,13 @@ trait EntityRepositoryFilterTrait
             if (isset($columns[$key])) {
                 if (is_numeric($value) && (int) $value === 0) {
                     $queryBuilder->andWhere(sprintf('%s is null', $columns[$key]));
+                } else if (is_array($value) && array_key_exists($key.'_from', $value) && array_key_exists($key.'_to', $value)) {
+                    if ($value[$key.'_from'] && $value[$key.'_to']) {
+                        $parameter = $key . uniqid();
+                        $queryBuilder->andWhere(sprintf('%s >= :%s AND %s <= :%s', $columns[$key], $parameter.'_from', $columns[$key], $parameter.'_to'))
+                            ->setParameter($parameter.'_from', $value[$key.'_from'])
+                            ->setParameter($parameter.'_to', $value[$key.'_to']);
+                    }
                 } else {
                     $parameter = $key . uniqid();
                     $operator = is_array($value) || $value instanceof Collection ? 'in' : '=';
