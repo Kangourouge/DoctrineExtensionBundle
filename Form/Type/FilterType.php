@@ -26,7 +26,7 @@ class FilterType extends AbstractType
 {
 
     /** @var EntityManagerInterface */
-    private $entityManager;
+    protected $entityManager;
 
     /** @var RequestStack */
     private $request;
