@@ -90,11 +90,11 @@ class FilterType extends AbstractType
         if (isset($data['reset'])) {
             $fields = $event->getForm()->getConfig()->getOption('fields');
             foreach ($fields as $name => $field) {
-                if ($field['type'] !== 'integer') {
-                    unset($data[$name]);
-                } else {
+                if ($field['type'] === 'range') {
                     unset($data[$name][$name.'_from']);
                     unset($data[$name][$name.'_to']);
+                } else {
+                    unset($data[$name]);
                 }
             }
         }
@@ -162,7 +162,7 @@ class FilterType extends AbstractType
                     $options['label'] = false;
                 }
 
-                if ($config['type'] && $config['type'] == 'integer') {
+                if ($config['type'] && $config['type'] == 'range') {
                     $options = array_replace_recursive(
                         [
                             'data' => $rows[$field],
@@ -257,7 +257,7 @@ class FilterType extends AbstractType
                     $rows[$field][$config['empty_label']] = $config['empty_value'];
                 } else if (is_bool($row[$identifier])) {
                     $rows[$field][$row[$identifier] ? 'Yes' : 'No'] = (bool)(int)$row[$identifier];
-                }  else if ($config['type'] == 'integer') {
+                }  else if ($config['type'] === 'range') {
                     $args = array_intersect_key($row, $properties);
                     foreach ($args as $property => $value) {
                         if (!isset($rows[$field]['min']) || $value < $rows[$field]['min']) {
