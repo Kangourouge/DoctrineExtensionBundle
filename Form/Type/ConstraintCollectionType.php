@@ -16,12 +16,15 @@ class ConstraintCollectionType extends AbstractType
 {
     public function buildForm(FormBuilderInterface $builder, array $options)
     {
-        foreach ($options['classes'] as $idx => $class) {
+        $classes = call_user_func(sprintf('%s::getConstraintClasses', $options['class']));
+
+        foreach ($classes as $idx => $class) {
             $builder->add(self::fqcnToBlockPrefix($class), CollectionType::class, [
                 'entry_type' => ConstraintType::class,
                 'entry_options' => ['class' => $class, 'label' => false],
                 'allow_add' => true,
                 'allow_delete' => true,
+                'by_reference' => false
             ]);
         }
 
@@ -60,7 +63,7 @@ class ConstraintCollectionType extends AbstractType
     public function configureOptions(OptionsResolver $resolver)
     {
         $resolver->setDefault('by_reference', false);
-        $resolver->setRequired('classes');
-        $resolver->setAllowedTypes('classes', 'array');
+        $resolver->setRequired('class');
+        $resolver->setAllowedTypes('class', 'string');
     }
 }

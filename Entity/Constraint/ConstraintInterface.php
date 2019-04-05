@@ -10,30 +10,6 @@ interface ConstraintInterface
     public function getId();
 
     /**
-     * @return int
-     */
-    public function getForeignId();
-
-    /**
-     * @param int $foreignId
-     *
-     * @return ConstraintInterface
-     */
-    public function setForeignId(int $foreignId);
-
-    /**
-     * @return string
-     */
-    public function getForeignClass();
-
-    /**
-     * @param string $foreignClass
-     *
-     * @return ConstraintInterface
-     */
-    public function setForeignClass(string $foreignClass);
-
-    /**
      * @return string
      */
     public function getType();

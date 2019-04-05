@@ -45,8 +45,3 @@ services:
         public: false
         decorates: 'Doctrine\ORM\EntityManagerInterface'
         arguments: ['@KRG\DoctrineExtensionBundle\ORM\EntityManagerDecorator.inner']
-
-    KRG\DoctrineExtensionBundle\Listener\:
-        resource: '../../Listener/*'
-        lazy: true
-        tags: [doctrine.event_subscriber]

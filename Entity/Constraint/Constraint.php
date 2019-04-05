@@ -20,18 +20,6 @@ class Constraint implements ConstraintInterface
     protected $id;
 
     /**
-     * @ORM\Column(type="integer")
-     * @var integer
-     */
-    protected $foreignId;
-
-    /**
-     * @ORM\Column(type="string")
-     * @var string
-     */
-    protected $foreignClass;
-
-    /**
      * @ORM\Column(type="constraint_enum")
      * @var string
      */
@@ -49,9 +37,6 @@ class Constraint implements ConstraintInterface
      */
     protected $entityId;
 
-    /** @var mixed */
-    private $entity;
-
     public function __construct()
     {
         $this->type = ConstraintEnumType::INCLUDE;
@@ -63,46 +48,6 @@ class Constraint implements ConstraintInterface
     public function getId()
     {
         return $this->id;
-    }
-
-    /**
-     * @return int
-     */
-    public function getForeignId()
-    {
-        return $this->foreignId;
-    }
-
-    /**
-     * @param int $foreignId
-     *
-     * @return Constraint
-     */
-    public function setForeignId(int $foreignId)
-    {
-        $this->foreignId = $foreignId;
-
-        return $this;
-    }
-
-    /**
-     * @return string
-     */
-    public function getForeignClass()
-    {
-        return $this->foreignClass;
-    }
-
-    /**
-     * @param string $foreignClass
-     *
-     * @return Constraint
-     */
-    public function setForeignClass(string $foreignClass)
-    {
-        $this->foreignClass = $foreignClass;
-
-        return $this;
     }
 
     /**
@@ -166,23 +111,15 @@ class Constraint implements ConstraintInterface
     }
 
     /**
-     * @return mixed
+     * @return array
      */
-    public function getEntity()
+    public function toArray()
     {
-        return $this->entity;
-    }
-
-    /**
-     * @param $entity
-     *
-     * @return $this
-     */
-    public function setEntity($entity)
-    {
-        $this->entity = $entity;
-        $this->entityId = $entity->getId();
-        $this->entityClass = get_class($entity);
-        return $this;
+        return [
+            'id' => $this->id,
+            'type' => $this->type,
+            'entityClass' => $this->entityClass,
+            'entityId' => $this->entityId
+        ];
     }
 }

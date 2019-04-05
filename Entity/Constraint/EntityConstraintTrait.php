@@ -34,9 +34,6 @@ trait EntityConstraintTrait
     {
         $this->constraints->add($constraint);
 
-        $constraint->setForeignId($this->getId());
-        $constraint->setForeignClass(get_class($this));
-
         return $this;
     }
 
@@ -57,17 +54,10 @@ trait EntityConstraintTrait
      */
     public function getArrayConstraints()
     {
-        return $this->_constraints;
-    }
+        if ($this->_constraints === null) {
+            $this->_constraints = ConstraintManager::format($this->constraints->toArray());
+        }
 
-    /**
-     * @param array $constraints
-     *
-     * @return ConstraintInterface
-     */
-    public function setArrayConstraints(array $constraints)
-    {
-        $this->_constraints = $constraints;
-        return $this;
+        return $this->_constraints;
     }
 }

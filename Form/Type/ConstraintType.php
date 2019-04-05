@@ -4,12 +4,14 @@ namespace KRG\DoctrineExtensionBundle\Form\Type;
 
 use Doctrine\ORM\EntityManagerInterface;
 use KRG\DoctrineExtensionBundle\Entity\Constraint\ConstraintInterface;
+use KRG\DoctrineExtensionBundle\Form\DataTransformer\EntityDataTransformer;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\CallbackTransformer;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\FormEvent;
 use Symfony\Component\Form\FormEvents;
+use Symfony\Component\OptionsResolver\Options;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class ConstraintType extends AbstractType
@@ -30,26 +32,24 @@ class ConstraintType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options)
     {
         $builder->add('type')
-                ->add('entity', EntityType::class, [
-                    'class' => $options['class']
+                ->add('entityId', EntityType::class, [
+                    'class' => $options['class'],
+                    'choice_value' => 'id'
                 ]);
 
-        $builder->addModelTransformer(new CallbackTransformer(
-            function($value) {
-                if ($value instanceof ConstraintInterface) {
-                    $value->setEntity($this->entityManager->find($value->getEntityClass(), $value->getEntityId()));
-                }
-                return $value;
-            },
-            function($value) {
-                return $value;
-            }
-        ));
+        $builder->get('entityId')->addModelTransformer(new EntityDataTransformer($this->entityManager, $options['class']));
     }
 
     public function configureOptions(OptionsResolver $resolver)
     {
         $resolver->setDefault('data_class', ConstraintInterface::class);
         $resolver->setRequired('class');
+        $resolver->setNormalizer('empty_data', function(Options $options, $data){
+            /** @var ConstraintInterface $constraint */
+            $constraint = $this->entityManager->getClassMetadata(ConstraintInterface::class)->newInstance();
+            $constraint->setEntityClass($options['class']);
+
+            return $constraint;
+        });
     }
 }
