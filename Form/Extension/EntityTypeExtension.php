@@ -50,9 +50,10 @@ class EntityTypeExtension extends AbstractTypeExtension
     public function classNormalizer(OptionsResolver $resolver, $class)
     {
         if ($this->isInterface($class)) {
-            if ($this->classMetadataFactory->hasMetadataFor($class)) {
-                return $this->classMetadataFactory->getMetadataFor($class)->getName();
-            }
+            try {
+                $classMetadata = $this->classMetadataFactory->getMetadataFor($class);
+                return $classMetadata->getName();
+            } catch(\Exception $exception) {}
         }
 
         return $class;
