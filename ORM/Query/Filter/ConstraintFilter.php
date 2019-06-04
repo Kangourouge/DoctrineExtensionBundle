@@ -82,7 +82,7 @@ class ConstraintFilter extends SQLFilter
                 foreach ($associations as $association) {
                     $clause = $this->addClause($targetTableAlias, $association['targetToSourceKeyColumns']['id'], $data);
 
-                    $clause = sprintf('%s.type IS NOT NULL OR %s', $targetTableAlias, $clause);
+                    $clause = sprintf('%s.id IS NOT NULL OR %s', $targetTableAlias, $clause);
 
                     $clauses[] = $clause;
                 }

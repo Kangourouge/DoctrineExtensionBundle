@@ -2,6 +2,8 @@
 
 namespace KRG\DoctrineExtensionBundle\Entity\Constraint;
 
+use KRG\DoctrineExtensionBundle\DBAL\ConstraintEnumType;
+
 class ConstraintManager
 {
     public static function format(array $constraints)
@@ -28,5 +30,29 @@ class ConstraintManager
         }
 
         return $data;
+    }
+
+    public static function check(array $constraints, array $data)
+    {
+        foreach($constraints as $class => $constraint) {
+            if (
+                (
+                    isset($constraint[ConstraintEnumType::INCLUDE])
+                    && (
+                            !isset($data[$class])
+                        ||  !in_array($data[$class], $constraint[ConstraintEnumType::INCLUDE])
+                    )
+                )
+                ||
+                (
+                    isset($constraint[ConstraintEnumType::EXCLUDE])
+                    && isset($data[$class])
+                    && in_array($data[$class], $constraint[ConstraintEnumType::EXCLUDE])
+                )
+            ) {
+                return false;
+            }
+        }
+        return true;
     }
 }
