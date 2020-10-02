@@ -1,3 +1,5 @@
+Abandoned!
+
 # DoctrineExtensionBundle
 Deal with interfaces
 
